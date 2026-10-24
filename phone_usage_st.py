@@ -13,10 +13,16 @@ st.set_page_config(
 )
 
 # Load the dataset
+
 df = pd.read_csv("phone_usage_india.csv")
 engineered_df = pd.read_csv("phone_usage_feature_engineered.csv")
 
-classifier = joblib.load("random_forest_primary_use.pkl")
+# Load the classification model only if the file is available
+try:
+    classifier = joblib.load("random_forest_primary_use.pkl")
+except FileNotFoundError:
+    classifier = None
+
 label_encoder = joblib.load("label_encoder.pkl")
 
 kmeans_model = joblib.load("best_kmeans_model.pkl")
@@ -219,7 +225,7 @@ elif page == "📊 EDA Visuals":
 
         plt.tight_layout()
         st.pyplot(fig)
-        #plt.close(fig)
+        plt.close(fig)
 
 
    
@@ -294,96 +300,107 @@ elif page == "📊 EDA Visuals":
 
 
 
+
+
 elif page == "🧠 Predict Primary Usage":
-    st.write(
-        "Use the trained Random Forest model to estimate a user's "
-        "primary phone usage category based on their demographic "
-        "details and smartphone usage patterns."
-    )
 
-    st.info(
-        "Adjust the input values below, then click "
-        "'Predict Primary Use' to generate a prediction."
-    )
-
-    #st.divider()
-    #st.header("🧠 Predict the Primary Use")
-    #st.write("Enter the user's details and phone usage patterns.")
-
-    with st.form("user_input_form"):
-        input_data = {}
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            age = st.slider("Age", 10, 100, 25)
-            gender = st.selectbox("Gender", sorted(engineered_df["Gender"].dropna().unique()))
-            location = st.selectbox("Location", sorted(engineered_df["Location"].dropna().unique()))
-            phone_brand = st.selectbox("Phone Brand", sorted(engineered_df["Phone Brand"].dropna().unique()))
-            os_value = st.selectbox("Operating System", sorted(engineered_df["OS"].dropna().unique()))
-
-            input_data["Age"] = age
-            input_data["Gender"] = gender
-            input_data["Location"] = location
-            input_data["Phone Brand"] = phone_brand
-            input_data["OS"] = os_value
-
-            input_data["E-commerce Spend (INR/month)"] = st.slider(
-                "E-commerce Spend (INR/month)", 0, 10000, 500
-            )
-            input_data["Monthly Recharge Cost (INR)"] = st.slider(
-                "Monthly Recharge Cost (INR)", 0, 1000, 200
-            )
-            
-
-        with col2:
-            input_data["Number of Apps Installed"] = st.slider(
-                        "Number of Apps Installed", 0, 200, 30
-            )
-            input_data["Calls Duration (mins/day)"] = st.slider(
-                            "Calls Duration (mins/day)", 0, 300, 30
-            )
-            input_data["Data Usage (GB/month)"] = st.slider(
-                "Data Usage (GB/month)", 0, 100, 20
-            )
-            input_data["Screen Time (hrs/day)"] = st.slider(
-                "Screen Time (hrs/day)", 0.0, 24.0, 5.0
-            )
-            input_data["Social Media Time (hrs/day)"] = st.slider(
-                "Social Media Time (hrs/day)", 0.0, 24.0, 2.0
-            )
-            input_data["Streaming Time (hrs/day)"] = st.slider(
-                "Streaming Time (hrs/day)", 0.0, 24.0, 1.0
-            )
-            input_data["Gaming Time (hrs/day)"] = st.slider(
-                "Gaming Time (hrs/day)", 0.0, 24.0, 1.0
-            )
-
-        submitted = st.form_submit_button("Predict Primary Use")
-
-    if submitted:
-        input_data["Entertainment_Index"] = (
-            input_data["Streaming Time (hrs/day)"]
-            + input_data["Gaming Time (hrs/day)"]
-            + input_data["Social Media Time (hrs/day)"]
-        ) / 3
-
-        input_data["Spend_Ratio"] = (
-            input_data["E-commerce Spend (INR/month)"]
-            / (input_data["Monthly Recharge Cost (INR)"] + 1)
+    if classifier is None:
+        st.warning(
+            "The Random Forest model file is not available. "
+            "Please run the classification notebook to generate "
+            "random_forest_primary_use.pkl before making predictions."
         )
 
-        input_df = pd.DataFrame([input_data])
+    else:
+        st.write(
+            "Use the trained Random Forest model to estimate a user's "
+            "primary phone usage category based on their demographic "
+            "details and smartphone usage patterns."
+        )
 
-        prediction = classifier.predict(input_df)
-        predicted_label = label_encoder.inverse_transform(prediction)
+        st.info(
+            "Adjust the input values below, then click "
+            "'Predict Primary Use' to generate a prediction."
+        )
 
-        st.success(f"✅ Predicted Primary Use: **{predicted_label[0]}**")
+        with st.form("user_input_form"):
+            input_data = {}
 
+            col1, col2 = st.columns(2)
 
+            with col1:
+                age = st.slider("Age", 10, 100, 25)
+                gender = st.selectbox(
+                    "Gender", sorted(engineered_df["Gender"].dropna().unique())
+                )
+                location = st.selectbox(
+                    "Location", sorted(engineered_df["Location"].dropna().unique())
+                )
+                phone_brand = st.selectbox(
+                    "Phone Brand", sorted(engineered_df["Phone Brand"].dropna().unique())
+                )
+                os_value = st.selectbox(
+                    "Operating System", sorted(engineered_df["OS"].dropna().unique())
+                )
 
+                input_data["Age"] = age
+                input_data["Gender"] = gender
+                input_data["Location"] = location
+                input_data["Phone Brand"] = phone_brand
+                input_data["OS"] = os_value
 
+                input_data["E-commerce Spend (INR/month)"] = st.slider(
+                    "E-commerce Spend (INR/month)", 0, 10000, 500
+                )
+                input_data["Monthly Recharge Cost (INR)"] = st.slider(
+                    "Monthly Recharge Cost (INR)", 0, 1000, 200
+                )
 
+            with col2:
+                input_data["Number of Apps Installed"] = st.slider(
+                    "Number of Apps Installed", 0, 200, 30
+                )
+                input_data["Calls Duration (mins/day)"] = st.slider(
+                    "Calls Duration (mins/day)", 0, 300, 30
+                )
+                input_data["Data Usage (GB/month)"] = st.slider(
+                    "Data Usage (GB/month)", 0, 100, 20
+                )
+                input_data["Screen Time (hrs/day)"] = st.slider(
+                    "Screen Time (hrs/day)", 0.0, 24.0, 5.0
+                )
+                input_data["Social Media Time (hrs/day)"] = st.slider(
+                    "Social Media Time (hrs/day)", 0.0, 24.0, 2.0
+                )
+                input_data["Streaming Time (hrs/day)"] = st.slider(
+                    "Streaming Time (hrs/day)", 0.0, 24.0, 1.0
+                )
+                input_data["Gaming Time (hrs/day)"] = st.slider(
+                    "Gaming Time (hrs/day)", 0.0, 24.0, 1.0
+                )
+
+            submitted = st.form_submit_button("Predict Primary Use")
+
+        if submitted:
+            input_data["Entertainment_Index"] = (
+                input_data["Streaming Time (hrs/day)"]
+                + input_data["Gaming Time (hrs/day)"]
+                + input_data["Social Media Time (hrs/day)"]
+            ) / 3
+
+            input_data["Spend_Ratio"] = (
+                input_data["E-commerce Spend (INR/month)"]
+                / (input_data["Monthly Recharge Cost (INR)"] + 1)
+            )
+
+            input_df = pd.DataFrame([input_data])
+
+            prediction = classifier.predict(input_df)
+            predicted_label = label_encoder.inverse_transform(prediction)
+
+            st.success(
+                f"✅ Predicted Primary Use: **{predicted_label[0]}**"
+            )
 
 elif page == "👥 User Clustering & Segmentation":
 
